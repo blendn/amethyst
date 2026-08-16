@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: amethyst
+      POSTGRES_PASSWORD: amethyst_dev
+      POSTGRES_DB: amethyst
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U amethyst -d amethyst"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - amethyst_postgres:/var/lib/postgresql/data
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgres://amethyst:amethyst_dev@postgres:5432/amethyst
+      WEB_ORIGIN: http://localhost:5173
+      AUTH_PEPPER: demo-only-change-before-any-deployment-32-bytes
+      SESSION_TTL_HOURS: 24
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "5173:80"
+
+volumes:
+  amethyst_postgres:

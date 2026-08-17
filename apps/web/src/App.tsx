@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
+  type FormEvent,
+} from "react";
 import { DEMO_WARNING, type VaultEnvelope } from "@amethyst/protocol";
 import { api, type SessionData } from "./api";
 import {
@@ -11,9 +17,13 @@ import {
   type VaultEntry,
   type VaultFolder,
 } from "./crypto";
+import {
+  initialVaultState,
+  vaultReducer,
+  type EntryRecord,
+  type FolderRecord,
+} from "./state/vault-state";
 
-type EntryRecord = { entry: VaultEntry; envelope: VaultEnvelope };
-type FolderRecord = { folder: VaultFolder; envelope: VaultEnvelope };
 type EditorState = Pick<
   VaultEntry,
   "name" | "username" | "password" | "url" | "notes" | "favorite" | "folderId"
@@ -30,10 +40,7 @@ const emptyEditor: EditorState = {
 };
 
 export function App() {
-  const [session, setSession] = useState<SessionData | null>(null);
-  const [vaultKey, setVaultKey] = useState<CryptoKey | null>(null);
-  const [entries, setEntries] = useState<EntryRecord[]>([]);
-  const [folders, setFolders] = useState<FolderRecord[]>([]);
+  const [vaultState, dispatch] = useReducer(vaultReducer, initialVaultState);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -41,7 +48,7 @@ export function App() {
   useEffect(() => {
     api
       .session()
-      .then(setSession)
+      .then((session) => dispatch({ type: "SESSION_RESTORED", session }))
       .catch(() => undefined)
       .finally(() => setLoading(false));
   }, []);
@@ -55,28 +62,25 @@ export function App() {
         object: await decryptVaultObject(key, data.userId, object),
       })),
     );
-    setEntries(
-      decrypted
-        .filter(
-          (record): record is { envelope: VaultEnvelope; object: VaultEntry } =>
-            record.object.objectType === "login",
-        )
-        .map(({ envelope, object }) => ({ envelope, entry: object })),
-    );
-    setFolders(
-      decrypted
-        .filter(
-          (
-            record,
-          ): record is { envelope: VaultEnvelope; object: VaultFolder } =>
-            record.object.objectType === "folder",
-        )
-        .map(({ envelope, object }) => ({ envelope, folder: object })),
-    );
+    const entries = decrypted
+      .filter(
+        (record): record is { envelope: VaultEnvelope; object: VaultEntry } =>
+          record.object.objectType === "login",
+      )
+      .map(({ envelope, object }) => ({ envelope, entry: object }));
+    const folders = decrypted
+      .filter(
+        (record): record is { envelope: VaultEnvelope; object: VaultFolder } =>
+          record.object.objectType === "folder",
+      )
+      .map(({ envelope, object }) => ({ envelope, folder: object }));
+
+    return { entries, folders };
   }
 
   async function unlock(masterPassword: string) {
-    if (!session) return;
+    if (vaultState.status !== "locked") return;
+    const { session } = vaultState;
     setBusy(true);
     setError("");
     try {
@@ -93,8 +97,13 @@ export function App() {
         session.keyBundle,
       );
       keys.keyEncryptionKey.fill(0);
-      await loadVault(key, session);
-      setVaultKey(key);
+      const { entries, folders } = await loadVault(key, session);
+      dispatch({
+        type: "UNLOCK_SUCCEEDED",
+        vaultKey: key,
+        entries,
+        folders,
+      });
     } catch {
       setError("Unable to unlock the vault. Check the master password.");
     } finally {
@@ -103,15 +112,18 @@ export function App() {
   }
 
   async function completeAuthentication(data: SessionData, key: CryptoKey) {
-    await loadVault(key, data);
-    setSession(data);
-    setVaultKey(key);
+    const { entries, folders } = await loadVault(key, data);
+    dispatch({
+      type: "AUTHENTICATED",
+      session: data,
+      vaultKey: key,
+      entries,
+      folders,
+    });
   }
 
   function lock() {
-    setVaultKey(null);
-    setEntries([]);
-    setFolders([]);
+    dispatch({ type: "LOCK" });
     setError("");
   }
 
@@ -122,12 +134,27 @@ export function App() {
     } catch {
       /* Clear local state even if the session expired. */
     }
-    setVaultKey(null);
-    setEntries([]);
-    setFolders([]);
-    setSession(null);
+    dispatch({ type: "LOGOUT" });
     setBusy(false);
   }
+
+  const setEntries: React.Dispatch<React.SetStateAction<EntryRecord[]>> = (
+    update,
+  ) => {
+    if (vaultState.status !== "unlocked") return;
+    const entries =
+      typeof update === "function" ? update(vaultState.entries) : update;
+    dispatch({ type: "ENTRIES_UPDATED", entries });
+  };
+
+  const setFolders: React.Dispatch<React.SetStateAction<FolderRecord[]>> = (
+    update,
+  ) => {
+    if (vaultState.status !== "unlocked") return;
+    const folders =
+      typeof update === "function" ? update(vaultState.folders) : update;
+    dispatch({ type: "FOLDERS_UPDATED", folders });
+  };
 
   if (loading)
     return (
@@ -139,7 +166,7 @@ export function App() {
       </Shell>
     );
 
-  if (!session) {
+  if (vaultState.status === "signed-out") {
     return (
       <Shell>
         <AuthScreen
@@ -153,11 +180,11 @@ export function App() {
     );
   }
 
-  if (!vaultKey) {
+  if (vaultState.status === "locked") {
     return (
       <Shell>
         <UnlockScreen
-          email={session.email}
+          email={vaultState.session.email}
           busy={busy}
           error={error}
           onUnlock={unlock}
@@ -170,11 +197,11 @@ export function App() {
   return (
     <Shell>
       <VaultScreen
-        session={session}
-        vaultKey={vaultKey}
-        entries={entries}
+        session={vaultState.session}
+        vaultKey={vaultState.vaultKey}
+        entries={vaultState.entries}
         setEntries={setEntries}
-        folders={folders}
+        folders={vaultState.folders}
         setFolders={setFolders}
         busy={busy}
         setBusy={setBusy}

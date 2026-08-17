@@ -11,14 +11,16 @@
     "dev": "concurrently -n api,web -c magenta,cyan \"npm run dev -w @amethyst/api\" \"npm run dev -w @amethyst/web\"",
     "build": "npm run build -w @amethyst/protocol && npm run build -w @amethyst/api && npm run build -w @amethyst/web",
     "typecheck": "npm run typecheck -w @amethyst/protocol && npm run typecheck -w @amethyst/api && npm run typecheck -w @amethyst/web",
-    "test": "npm run test -w @amethyst/api && npm run test -w @amethyst/web"
+    "test": "npm run test -w @amethyst/api && npm run test -w @amethyst/web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "concurrently": "^9.2.0",
+    "prettier": "^3.9.6",
     "typescript": "^5.9.2"
   },
   "engines": {
     "node": ">=22"
   }
 }
-

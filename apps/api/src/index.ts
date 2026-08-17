@@ -17,12 +17,10 @@ app.use((request, response, next) => {
   if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
     const origin = request.get("origin");
     if (origin && origin !== config.WEB_ORIGIN) {
-      response
-        .status(403)
-        .json({
-          error: "invalid_origin",
-          message: "Request origin is not allowed.",
-        });
+      response.status(403).json({
+        error: "invalid_origin",
+        message: "Request origin is not allowed.",
+      });
       return;
     }
   }

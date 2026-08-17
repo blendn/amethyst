@@ -4,14 +4,14 @@ Status: **draft; not approved for implementation**.
 
 ## Primitive suite
 
-| Purpose | Primitive |
-|---|---|
-| Password KDF | Argon2id v1.3 |
-| Key separation | HKDF-SHA-256 |
-| Authenticated encryption | AES-256-GCM, 128-bit tag |
-| Random bytes | Browser cryptographic RNG |
-| Text encoding | UTF-8 without implicit normalization |
-| Object serialization | Deterministic CBOR (pending final decision) |
+| Purpose                  | Primitive                                   |
+| ------------------------ | ------------------------------------------- |
+| Password KDF             | Argon2id v1.3                               |
+| Key separation           | HKDF-SHA-256                                |
+| Authenticated encryption | AES-256-GCM, 128-bit tag                    |
+| Random bytes             | Browser cryptographic RNG                   |
+| Text encoding            | UTF-8 without implicit normalization        |
+| Object serialization     | Deterministic CBOR (pending final decision) |
 
 No caller may substitute algorithms based on runtime availability. Unsupported
 clients must fail with a clear compatibility error.

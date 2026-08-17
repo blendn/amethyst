@@ -99,18 +99,18 @@ labels, URLs, and item timestamps. Ciphertext padding is deferred.
 
 ## Abuse cases and controls
 
-| Abuse case | Primary control |
-|---|---|
-| Database theft | Argon2id, separated keys, wrapped random vault key |
-| Ciphertext moved to another account/object | AES-GCM AAD binds owner and object IDs |
-| Nonce reuse | CSPRNG generation and tests; never retry with an old nonce |
-| Stale overwrite | Expected revision and HTTP 409 conflict |
-| Session database theft | Hash refresh tokens; rotate and detect reuse |
-| Account enumeration | Synthetic pre-login data and generic responses |
-| Online guessing | Layered account/network rate limits and alerts |
-| XSS | Strict CSP, Trusted Types, no third-party runtime scripts |
-| Sensitive logging | Body/cookie redaction and allowlisted structured logs |
-| Supply-chain compromise | Lockfiles, review, scanning, reproducible builds |
+| Abuse case                                 | Primary control                                            |
+| ------------------------------------------ | ---------------------------------------------------------- |
+| Database theft                             | Argon2id, separated keys, wrapped random vault key         |
+| Ciphertext moved to another account/object | AES-GCM AAD binds owner and object IDs                     |
+| Nonce reuse                                | CSPRNG generation and tests; never retry with an old nonce |
+| Stale overwrite                            | Expected revision and HTTP 409 conflict                    |
+| Session database theft                     | Hash refresh tokens; rotate and detect reuse               |
+| Account enumeration                        | Synthetic pre-login data and generic responses             |
+| Online guessing                            | Layered account/network rate limits and alerts             |
+| XSS                                        | Strict CSP, Trusted Types, no third-party runtime scripts  |
+| Sensitive logging                          | Body/cookie redaction and allowlisted structured logs      |
+| Supply-chain compromise                    | Lockfiles, review, scanning, reproducible builds           |
 
 ## Residual risk
 

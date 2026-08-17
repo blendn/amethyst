@@ -24,12 +24,10 @@ export function errorHandler(
   _next: NextFunction,
 ): void {
   if (error instanceof ZodError) {
-    response
-      .status(400)
-      .json({
-        error: "invalid_request",
-        message: "Request validation failed.",
-      });
+    response.status(400).json({
+      error: "invalid_request",
+      message: "Request validation failed.",
+    });
     return;
   }
 
@@ -44,10 +42,8 @@ export function errorHandler(
     "Unhandled API error",
     error instanceof Error ? error.message : "unknown",
   );
-  response
-    .status(500)
-    .json({
-      error: "internal_error",
-      message: "The request could not be completed.",
-    });
+  response.status(500).json({
+    error: "internal_error",
+    message: "The request could not be completed.",
+  });
 }

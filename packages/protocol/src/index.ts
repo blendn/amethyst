@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-export const DEMO_WARNING = "Educational prototype — do not store real credentials.";
+export const DEMO_WARNING =
+  "Educational prototype — do not store real credentials.";
 
 export const kdfParamsSchema = z.object({
   memoryKiB: z.number().int().min(19_456).max(262_144),
@@ -58,9 +59,11 @@ export const createVaultObjectSchema = vaultEnvelopeSchema.pick({
   ciphertext: true,
 });
 
-export const updateVaultObjectSchema = createVaultObjectSchema.omit({ id: true }).extend({
-  expectedRevision: z.number().int().nonnegative(),
-});
+export const updateVaultObjectSchema = createVaultObjectSchema
+  .omit({ id: true })
+  .extend({
+    expectedRevision: z.number().int().nonnegative(),
+  });
 
 export const deleteVaultObjectSchema = z.object({
   expectedRevision: z.number().int().nonnegative(),
@@ -69,4 +72,3 @@ export const deleteVaultObjectSchema = z.object({
 export type KdfParams = z.infer<typeof kdfParamsSchema>;
 export type KeyBundle = z.infer<typeof keyBundleSchema>;
 export type VaultEnvelope = z.infer<typeof vaultEnvelopeSchema>;
-

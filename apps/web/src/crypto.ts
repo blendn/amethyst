@@ -7,7 +7,10 @@ const decoder = new TextDecoder("utf-8", { fatal: true });
 function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+  return btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/u, "");
 }
 
 function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
@@ -21,10 +24,20 @@ function randomBytes(length: number): Uint8Array<ArrayBuffer> {
   return crypto.getRandomValues(new Uint8Array(length));
 }
 
-async function hkdf(root: Uint8Array<ArrayBuffer>, info: string): Promise<Uint8Array<ArrayBuffer>> {
-  const material = await crypto.subtle.importKey("raw", root, "HKDF", false, ["deriveBits"]);
+async function hkdf(
+  root: Uint8Array<ArrayBuffer>,
+  info: string,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const material = await crypto.subtle.importKey("raw", root, "HKDF", false, [
+    "deriveBits",
+  ]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(32), info: encoder.encode(info) },
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(32),
+      info: encoder.encode(info),
+    },
     material,
     256,
   );
@@ -59,18 +72,24 @@ export async function deriveKeys(
   return { keyEncryptionKey, loginSecret: bytesToBase64Url(loginSecretBytes) };
 }
 
-function keyBundleAad(userId: string, salt: string, params: KdfParams): Uint8Array<ArrayBuffer> {
-  return encoder.encode(JSON.stringify([
-    "amethyst-key-bundle",
-    1,
-    userId,
-    "argon2id-v1.3",
-    params.memoryKiB,
-    params.iterations,
-    params.parallelism,
-    params.hashLength,
-    salt,
-  ]));
+function keyBundleAad(
+  userId: string,
+  salt: string,
+  params: KdfParams,
+): Uint8Array<ArrayBuffer> {
+  return encoder.encode(
+    JSON.stringify([
+      "amethyst-key-bundle",
+      1,
+      userId,
+      "argon2id-v1.3",
+      params.memoryKiB,
+      params.iterations,
+      params.parallelism,
+      params.hashLength,
+      salt,
+    ]),
+  );
 }
 
 export async function createVaultKeyBundle(
@@ -80,18 +99,39 @@ export async function createVaultKeyBundle(
   params: KdfParams,
 ): Promise<{ vaultKey: CryptoKey; keyBundle: KeyBundle }> {
   const rawVaultKey = randomBytes(32);
-  const vaultKey = await crypto.subtle.importKey("raw", rawVaultKey, "AES-GCM", false, ["encrypt", "decrypt"]);
-  const wrappingKey = await crypto.subtle.importKey("raw", keyEncryptionKey, "AES-GCM", false, ["encrypt"]);
+  const vaultKey = await crypto.subtle.importKey(
+    "raw",
+    rawVaultKey,
+    "AES-GCM",
+    false,
+    ["encrypt", "decrypt"],
+  );
+  const wrappingKey = await crypto.subtle.importKey(
+    "raw",
+    keyEncryptionKey,
+    "AES-GCM",
+    false,
+    ["encrypt"],
+  );
   const nonce = randomBytes(12);
   const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: nonce, additionalData: keyBundleAad(userId, salt, params), tagLength: 128 },
+    {
+      name: "AES-GCM",
+      iv: nonce,
+      additionalData: keyBundleAad(userId, salt, params),
+      tagLength: 128,
+    },
     wrappingKey,
     rawVaultKey,
   );
   rawVaultKey.fill(0);
   return {
     vaultKey,
-    keyBundle: { version: 1, nonce: bytesToBase64Url(nonce), ciphertext: bytesToBase64Url(new Uint8Array(ciphertext)) },
+    keyBundle: {
+      version: 1,
+      nonce: bytesToBase64Url(nonce),
+      ciphertext: bytesToBase64Url(new Uint8Array(ciphertext)),
+    },
   };
 }
 
@@ -102,7 +142,13 @@ export async function unwrapVaultKey(
   params: KdfParams,
   bundle: KeyBundle,
 ): Promise<CryptoKey> {
-  const wrappingKey = await crypto.subtle.importKey("raw", keyEncryptionKey, "AES-GCM", false, ["decrypt"]);
+  const wrappingKey = await crypto.subtle.importKey(
+    "raw",
+    keyEncryptionKey,
+    "AES-GCM",
+    false,
+    ["decrypt"],
+  );
   const rawVaultKey = await crypto.subtle.decrypt(
     {
       name: "AES-GCM",
@@ -113,7 +159,10 @@ export async function unwrapVaultKey(
     wrappingKey,
     base64UrlToBytes(bundle.ciphertext),
   );
-  return crypto.subtle.importKey("raw", rawVaultKey, "AES-GCM", false, ["encrypt", "decrypt"]);
+  return crypto.subtle.importKey("raw", rawVaultKey, "AES-GCM", false, [
+    "encrypt",
+    "decrypt",
+  ]);
 }
 
 export type VaultEntry = {
@@ -143,13 +192,24 @@ export type VaultFolder = {
 export type VaultObject = VaultEntry | VaultFolder;
 
 function objectAad(userId: string, objectId: string): Uint8Array<ArrayBuffer> {
-  return encoder.encode(JSON.stringify(["amethyst-vault-object", 1, userId, objectId, 1]));
+  return encoder.encode(
+    JSON.stringify(["amethyst-vault-object", 1, userId, objectId, 1]),
+  );
 }
 
-export async function encryptVaultObject(vaultKey: CryptoKey, userId: string, object: VaultObject) {
+export async function encryptVaultObject(
+  vaultKey: CryptoKey,
+  userId: string,
+  object: VaultObject,
+) {
   const nonce = randomBytes(12);
   const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: nonce, additionalData: objectAad(userId, object.objectId), tagLength: 128 },
+    {
+      name: "AES-GCM",
+      iv: nonce,
+      additionalData: objectAad(userId, object.objectId),
+      tagLength: 128,
+    },
     vaultKey,
     encoder.encode(JSON.stringify(object)),
   );
@@ -178,13 +238,14 @@ export async function decryptVaultObject(
   );
   const parsed = JSON.parse(decoder.decode(plaintext)) as VaultObject;
   if (
-    parsed.schemaVersion !== 1
-    || (parsed.objectType !== "login" && parsed.objectType !== "folder")
-    || parsed.objectId !== envelope.id
+    parsed.schemaVersion !== 1 ||
+    (parsed.objectType !== "login" && parsed.objectType !== "folder") ||
+    parsed.objectId !== envelope.id
   ) {
     throw new Error("Invalid encrypted vault object.");
   }
-  if (parsed.objectType === "login") return { ...parsed, folderId: parsed.folderId ?? null };
+  if (parsed.objectType === "login")
+    return { ...parsed, folderId: parsed.folderId ?? null };
   return parsed;
 }
 
@@ -196,18 +257,21 @@ export async function decryptEntry(
   envelope: { id: string; nonce: string; ciphertext: string },
 ): Promise<VaultEntry> {
   const object = await decryptVaultObject(vaultKey, userId, envelope);
-  if (object.objectType !== "login") throw new Error("Vault object is not a login entry.");
+  if (object.objectType !== "login")
+    throw new Error("Vault object is not a login entry.");
   return object;
 }
 
 export function generatePassword(length = 20): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*()-_=+";
+  const alphabet =
+    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*()-_=+";
   const limit = 256 - (256 % alphabet.length);
   let password = "";
   while (password.length < length) {
     const values = randomBytes(length);
     for (const value of values) {
-      if (value < limit && password.length < length) password += alphabet[value % alphabet.length];
+      if (value < limit && password.length < length)
+        password += alphabet[value % alphabet.length];
     }
   }
   return password;

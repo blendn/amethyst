@@ -53,13 +53,21 @@ vaultRouter.post("/objects", async (request, response) => {
       [request.auth!.userId],
     );
     const revision = revisionResult.rows[0]?.current_revision;
-    if (!revision) throw new HttpError(404, "account_not_found", "Account not found.");
+    if (!revision)
+      throw new HttpError(404, "account_not_found", "Account not found.");
     const insert = await client.query<StoredObject>(
       `INSERT INTO vault_objects
         (id, user_id, format_version, nonce, ciphertext, revision)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, format_version, nonce, ciphertext, revision, deleted_at`,
-      [body.id, request.auth!.userId, body.version, body.nonce, body.ciphertext, revision],
+      [
+        body.id,
+        request.auth!.userId,
+        body.version,
+        body.nonce,
+        body.ciphertext,
+        revision,
+      ],
     );
     await client.query("COMMIT");
     response.status(201).json(envelope(insert.rows[0]!));
@@ -84,9 +92,14 @@ vaultRouter.put("/objects/:id", async (request, response) => {
       [request.auth!.userId, request.params.id],
     );
     const row = current.rows[0];
-    if (!row) throw new HttpError(404, "object_not_found", "Vault object not found.");
+    if (!row)
+      throw new HttpError(404, "object_not_found", "Vault object not found.");
     if (Number(row.revision) !== body.expectedRevision) {
-      throw new HttpError(409, "revision_conflict", "The vault object changed on another client.");
+      throw new HttpError(
+        409,
+        "revision_conflict",
+        "The vault object changed on another client.",
+      );
     }
     const revisionResult = await client.query<{ current_revision: string }>(
       `UPDATE user_revisions SET current_revision = current_revision + 1
@@ -100,7 +113,14 @@ vaultRouter.put("/objects/:id", async (request, response) => {
               revision = $6, deleted_at = NULL, updated_at = NOW()
         WHERE user_id = $1 AND id = $2
       RETURNING id, format_version, nonce, ciphertext, revision, deleted_at`,
-      [request.auth!.userId, request.params.id, body.version, body.nonce, body.ciphertext, revision],
+      [
+        request.auth!.userId,
+        request.params.id,
+        body.version,
+        body.nonce,
+        body.ciphertext,
+        revision,
+      ],
     );
     await client.query("COMMIT");
     response.json(envelope(update.rows[0]!));
@@ -122,9 +142,14 @@ vaultRouter.delete("/objects/:id", async (request, response) => {
       [request.auth!.userId, request.params.id],
     );
     const row = current.rows[0];
-    if (!row) throw new HttpError(404, "object_not_found", "Vault object not found.");
+    if (!row)
+      throw new HttpError(404, "object_not_found", "Vault object not found.");
     if (Number(row.revision) !== body.expectedRevision) {
-      throw new HttpError(409, "revision_conflict", "The vault object changed on another client.");
+      throw new HttpError(
+        409,
+        "revision_conflict",
+        "The vault object changed on another client.",
+      );
     }
     const revisionResult = await client.query<{ current_revision: string }>(
       `UPDATE user_revisions SET current_revision = current_revision + 1
@@ -146,4 +171,3 @@ vaultRouter.delete("/objects/:id", async (request, response) => {
     client.release();
   }
 });
-

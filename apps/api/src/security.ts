@@ -1,4 +1,9 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 import { config } from "./config.js";
 
 export function randomToken(bytes = 32): string {
@@ -22,4 +27,3 @@ export function secureEqual(left: Buffer, right: Buffer): boolean {
 export function normalizeEmail(email: string): string {
   return email.trim().toLocaleLowerCase("en-US");
 }
-

@@ -17,10 +17,16 @@ import {
   tokenHash,
 } from "./security.js";
 
-const SESSION_COOKIE = config.NODE_ENV === "production"
-  ? "__Host-amethyst_session"
-  : "amethyst_session";
-const DEMO_KDF_PARAMS = { memoryKiB: 65_536, iterations: 3, parallelism: 1, hashLength: 32 } as const;
+const SESSION_COOKIE =
+  config.NODE_ENV === "production"
+    ? "__Host-amethyst_session"
+    : "amethyst_session";
+const DEMO_KDF_PARAMS = {
+  memoryKiB: 65_536,
+  iterations: 3,
+  parallelism: 1,
+  hashLength: 32,
+} as const;
 
 declare global {
   namespace Express {
@@ -56,7 +62,8 @@ export async function requireAuth(
 ): Promise<void> {
   try {
     const rawToken = request.cookies[SESSION_COOKIE] as string | undefined;
-    if (!rawToken) throw new HttpError(401, "unauthorized", "Authentication required.");
+    if (!rawToken)
+      throw new HttpError(401, "unauthorized", "Authentication required.");
 
     const result = await pool.query<{
       id: string;
@@ -73,7 +80,10 @@ export async function requireAuth(
     );
 
     const session = result.rows[0];
-    if (!session || session.security_version !== session.current_security_version) {
+    if (
+      !session ||
+      session.security_version !== session.current_security_version
+    ) {
       throw new HttpError(401, "unauthorized", "Authentication required.");
     }
 
@@ -82,7 +92,9 @@ export async function requireAuth(
       securityVersion: session.security_version,
       sessionId: session.id,
     };
-    await pool.query("UPDATE sessions SET last_used_at = NOW() WHERE id = $1", [session.id]);
+    await pool.query("UPDATE sessions SET last_used_at = NOW() WHERE id = $1", [
+      session.id,
+    ]);
     next();
   } catch (error) {
     next(error);
@@ -98,7 +110,9 @@ authRouter.post("/prelogin", async (request, response) => {
     id: string;
     kdf_salt: string;
     kdf_params: typeof DEMO_KDF_PARAMS;
-  }>("SELECT id, kdf_salt, kdf_params FROM users WHERE email_normalized = $1", [normalized]);
+  }>("SELECT id, kdf_salt, kdf_params FROM users WHERE email_normalized = $1", [
+    normalized,
+  ]);
 
   const user = existing.rows[0];
   if (user) {
@@ -139,7 +153,10 @@ authRouter.post("/register", async (request, response) => {
 
   try {
     await client.query("BEGIN");
-    const reservationResult = await client.query<{ id: string; email_normalized: string }>(
+    const reservationResult = await client.query<{
+      id: string;
+      email_normalized: string;
+    }>(
       `DELETE FROM registration_reservations
         WHERE token_hash = $1 AND expires_at > NOW()
       RETURNING id, email_normalized`,
@@ -147,7 +164,11 @@ authRouter.post("/register", async (request, response) => {
     );
     const reservation = reservationResult.rows[0];
     if (!reservation || reservation.email_normalized !== normalized) {
-      throw new HttpError(400, "invalid_registration", "Registration could not be completed.");
+      throw new HttpError(
+        400,
+        "invalid_registration",
+        "Registration could not be completed.",
+      );
     }
 
     await client.query(
@@ -163,7 +184,9 @@ authRouter.post("/register", async (request, response) => {
         JSON.stringify(body.keyBundle),
       ],
     );
-    await client.query("INSERT INTO user_revisions (user_id) VALUES ($1)", [reservation.id]);
+    await client.query("INSERT INTO user_revisions (user_id) VALUES ($1)", [
+      reservation.id,
+    ]);
     await client.query("COMMIT");
     response.status(201).json({ userId: reservation.id });
   } catch (error) {
@@ -196,7 +219,11 @@ authRouter.post("/login", async (request, response) => {
   const user = result.rows[0];
   const candidate = authVerifier(body.loginSecret);
   if (!user || !secureEqual(candidate, user.auth_verifier)) {
-    throw new HttpError(401, "invalid_credentials", "Invalid email or master password.");
+    throw new HttpError(
+      401,
+      "invalid_credentials",
+      "Invalid email or master password.",
+    );
   }
 
   const sessionId = randomUUID();
@@ -205,7 +232,13 @@ authRouter.post("/login", async (request, response) => {
     `INSERT INTO sessions
       (id, user_id, token_hash, security_version, expires_at)
      VALUES ($1, $2, $3, $4, NOW() + ($5 * INTERVAL '1 hour'))`,
-    [sessionId, user.id, tokenHash(sessionToken), user.security_version, config.SESSION_TTL_HOURS],
+    [
+      sessionId,
+      user.id,
+      tokenHash(sessionToken),
+      user.security_version,
+      config.SESSION_TTL_HOURS,
+    ],
   );
   setSessionCookie(response, sessionToken);
   response.json({
@@ -228,7 +261,8 @@ authRouter.get("/session", requireAuth, async (request, response) => {
     [request.auth!.userId],
   );
   const user = result.rows[0];
-  if (!user) throw new HttpError(401, "unauthorized", "Authentication required.");
+  if (!user)
+    throw new HttpError(401, "unauthorized", "Authentication required.");
   response.json({
     userId: request.auth!.userId,
     email: user.email_normalized,
@@ -239,7 +273,9 @@ authRouter.get("/session", requireAuth, async (request, response) => {
 });
 
 authRouter.post("/logout", requireAuth, async (request, response) => {
-  await pool.query("DELETE FROM sessions WHERE id = $1", [request.auth!.sessionId]);
+  await pool.query("DELETE FROM sessions WHERE id = $1", [
+    request.auth!.sessionId,
+  ]);
   clearSessionCookie(response);
   response.status(204).send();
 });

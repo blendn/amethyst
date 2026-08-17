@@ -10,7 +10,9 @@ beforeAll(async () => {
 
 describe("authentication security helpers", () => {
   it("normalizes lookup emails without changing internal characters", () => {
-    expect(security.normalizeEmail("  Demo.User@Example.COM ")).toBe("demo.user@example.com");
+    expect(security.normalizeEmail("  Demo.User@Example.COM ")).toBe(
+      "demo.user@example.com",
+    );
   });
 
   it("creates stable, separated authentication verifiers", () => {
@@ -24,7 +26,8 @@ describe("authentication security helpers", () => {
 
   it("hashes session tokens before persistence", () => {
     expect(security.tokenHash("session-token")).toHaveLength(32);
-    expect(security.tokenHash("session-token").toString("hex")).not.toContain("session-token");
+    expect(security.tokenHash("session-token").toString("hex")).not.toContain(
+      "session-token",
+    );
   });
 });
-

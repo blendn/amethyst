@@ -17,14 +17,21 @@ app.use((request, response, next) => {
   if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
     const origin = request.get("origin");
     if (origin && origin !== config.WEB_ORIGIN) {
-      response.status(403).json({ error: "invalid_origin", message: "Request origin is not allowed." });
+      response
+        .status(403)
+        .json({
+          error: "invalid_origin",
+          message: "Request origin is not allowed.",
+        });
       return;
     }
   }
   next();
 });
 
-app.get("/api/v1/health/live", (_request, response) => response.json({ status: "ok" }));
+app.get("/api/v1/health/live", (_request, response) =>
+  response.json({ status: "ok" }),
+);
 app.get("/api/v1/health/ready", async (_request, response) => {
   await pool.query("SELECT 1");
   response.json({ status: "ok" });
@@ -38,4 +45,3 @@ await migrate();
 app.listen(config.PORT, () => {
   console.log(`Amethyst API listening on port ${config.PORT}`);
 });
-

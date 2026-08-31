@@ -9,13 +9,17 @@
   ],
   "scripts": {
     "dev": "concurrently -n api,web -c magenta,cyan \"npm run dev -w @amethyst/api\" \"npm run dev -w @amethyst/web\"",
+    "dev:e2e": "concurrently --kill-others-on-fail -n api,web -c magenta,cyan \"npm run dev -w @amethyst/api\" \"npm run dev:e2e -w @amethyst/web\"",
     "build": "npm run build -w @amethyst/protocol && npm run build -w @amethyst/api && npm run build -w @amethyst/web",
     "typecheck": "npm run build -w @amethyst/protocol && npm run typecheck -w @amethyst/api && npm run typecheck -w @amethyst/web",
     "test": "npm run test -w @amethyst/api && npm run test -w @amethyst/web",
+    "test:integration": "npm run build -w @amethyst/protocol && npm run test:integration -w @amethyst/api",
+    "test:e2e": "npm run build -w @amethyst/protocol && playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "concurrently": "^9.2.0",
     "prettier": "^3.9.6",
     "typescript": "^5.9.2"

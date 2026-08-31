@@ -66,3 +66,86 @@ jobs:
 
       - name: Build container
         run: docker build --file apps/${{ matrix.application }}/Dockerfile .
+
+  integration:
+    name: API integration
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: amethyst
+          POSTGRES_PASSWORD: amethyst_test
+          POSTGRES_DB: amethyst_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U amethyst -d amethyst_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      TEST_DATABASE_URL: postgres://amethyst:amethyst_test@127.0.0.1:5432/amethyst_test
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run API integration tests
+        run: npm run test:integration
+
+  end-to-end:
+    name: Browser end-to-end
+    needs: integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: amethyst
+          POSTGRES_PASSWORD: amethyst_test
+          POSTGRES_DB: amethyst_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U amethyst -d amethyst_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      TEST_DATABASE_URL: postgres://amethyst:amethyst_test@127.0.0.1:5432/amethyst_test
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser journey
+        run: npm run test:e2e

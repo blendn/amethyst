@@ -1,0 +1,16 @@
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: amethyst
+      POSTGRES_PASSWORD: amethyst_test
+      POSTGRES_DB: amethyst_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U amethyst -d amethyst_test"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data

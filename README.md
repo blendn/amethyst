@@ -55,6 +55,23 @@ npm test
 npm run build
 ```
 
+Database-backed integration tests use an isolated database whose name must end in
+`_test`:
+
+```bash
+docker compose -f docker-compose.test.yml up --detach --wait
+TEST_DATABASE_URL=postgres://amethyst:amethyst_test@127.0.0.1:55432/amethyst_test npm run test:integration
+```
+
+For the browser journey, install Chromium once and run Playwright against the same
+ephemeral database:
+
+```bash
+npx playwright install chromium
+TEST_DATABASE_URL=postgres://amethyst:amethyst_test@127.0.0.1:55432/amethyst_test npm run test:e2e
+docker compose -f docker-compose.test.yml down
+```
+
 For the presentation, create a disposable account and entry, then inspect
 `vault_objects.ciphertext` in PostgreSQL. Names, usernames, passwords, URLs, notes,
 folder data, and favorite state are contained only in client-encrypted ciphertext.

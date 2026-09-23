@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Field } from "../../components/Field";
+import { IDLE_LOCK_MINUTES } from "../../state/idle-lock";
 
 type UnlockScreenProps = {
   email: string;
   busy: boolean;
   error: string;
+  lockReason: "idle" | "page-leave" | null;
   onUnlock: (password: string) => void;
   onLogout: () => void;
 };
@@ -13,6 +15,7 @@ export function UnlockScreen({
   email,
   busy,
   error,
+  lockReason,
   onUnlock,
   onLogout,
 }: UnlockScreenProps) {
@@ -30,6 +33,13 @@ export function UnlockScreen({
       <div className="lock-icon">◆</div>
       <h2>Vault locked</h2>
       <p className="muted">Signed in as {email}</p>
+      {lockReason && (
+        <p className="muted">
+          {lockReason === "idle"
+            ? `Locked after ${IDLE_LOCK_MINUTES} minutes of inactivity.`
+            : "Locked when you left the page."}
+        </p>
+      )}
       <Field
         label="Master password"
         type="password"

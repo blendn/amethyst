@@ -1,6 +1,12 @@
 # Authentication and sessions
 
-Status: **draft; verifier approach requires explicit approval**.
+Status: **draft; derived-secret verifier permitted for the educational demo only**.
+The [decision record](decision-record.md) requires external review of a production
+authentication scheme and OPAQUE feasibility. The current API differs from the
+proposal below: it stores a peppered HMAC of the base64url login secret, issues a
+single cookie session, and returns fresh registration reservations for unknown
+emails. The per-user password-storage verifier, stable synthetic pre-login data,
+refresh rotation, and other controls below are not implemented.
 
 ## Separation from vault encryption
 

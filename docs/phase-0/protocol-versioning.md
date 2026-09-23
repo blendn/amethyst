@@ -1,5 +1,11 @@
 # Protocol versioning and migration
 
+Status: **draft migration policy**. The running demo already writes JSON-based
+key bundles and vault objects with `version: 1`, whereas the cryptographic
+protocol draft describes different bytes. Those demo identifiers are occupied.
+The [decision record](decision-record.md) requires new cryptographic format
+identifiers and explicit readers/migration before deterministic CBOR is written.
+
 ## Version dimensions
 
 Do not use one ambiguous global version. Track these independently:
@@ -22,6 +28,11 @@ Do not use one ambiguous global version. Track these independently:
 6. Migration is decrypt-old, validate, encrypt-new, verify-new, then commit.
 7. The old copy remains until the new copy is durably synchronized.
 8. Downgrades that weaken KDF or cryptographic parameters are prohibited.
+
+For the demo-to-reviewed-format transition, preserve the existing JSON/AAD
+interpretation for old records. Define separate new key-bundle and object-envelope
+versions, test both readers, and migrate only from an unlocked client. A mere
+change to `/api/v1` or a schema version cannot distinguish ciphertext formats.
 
 ## KDF parameter upgrades
 

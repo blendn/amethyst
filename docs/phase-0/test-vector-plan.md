@@ -2,8 +2,11 @@
 
 ## Purpose
 
-Version 1 test vectors are the executable interpretation of the protocol. They must
+Test vectors are the executable interpretation of an approved format. They must
 be generated only after byte encodings and open wire-format decisions are frozen.
+The running demo already uses `version: 1` for a different JSON encoding. This
+historical plan must be revised with the newly allocated format identifiers before
+fixtures are generated; existing demo ciphertext must retain its old interpretation.
 
 Vectors must be verified by two independent implementations, ideally using different
 languages and cryptographic libraries. Matching encrypt/decrypt code from one
@@ -13,7 +16,7 @@ implementation is insufficient because both paths may share the same mistake.
 
 ```text
 packages/test-vectors/
-  v1/
+  <reviewed-format-version>/
     manifest.json
     argon2id.json
     key-derivation.json

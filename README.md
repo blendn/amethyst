@@ -78,6 +78,9 @@ folder data, and favorite state are contained only in client-encrypted ciphertex
 
 ## Design documents
 
+- [`docs/phase-0/README.md`](docs/phase-0/README.md)
+- [`docs/phase-0/decision-record.md`](docs/phase-0/decision-record.md)
+- [`docs/phase-0/argon2id-benchmark-plan.md`](docs/phase-0/argon2id-benchmark-plan.md)
 - [`docs/phase-0/threat-model.md`](docs/phase-0/threat-model.md)
 - [`docs/phase-0/cryptographic-protocol.md`](docs/phase-0/cryptographic-protocol.md)
 - [`docs/phase-0/authentication.md`](docs/phase-0/authentication.md)

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amethyst Argon2id browser benchmark</title>
+  </head>
+  <body>
+    <main>
+      <h1>Argon2id browser benchmark</h1>
+      <p>
+        Measurement only. Use a disposable test device/session and never enter a
+        real master password. Follow
+        <code>docs/phase-0/argon2id-benchmark-plan.md</code>
+        for the full methodology.
+      </p>
+      <form id="setup">
+        <fieldset>
+          <legend>Device and run context</legend>
+          <label>Device model <input name="deviceModel" required /></label>
+          <label
+            >RAM (GiB)
+            <input name="ramGiB" type="number" min="0" step="0.1" required
+          /></label>
+          <label>OS/version <input name="os" required /></label>
+          <label>Browser/version <input name="browser" required /></label>
+          <label>Power mode <input name="powerMode" required /></label>
+          <label
+            >Browser state
+            <select name="browserState">
+              <option value="cold">Cold start</option>
+              <option value="already-running">Already running</option>
+            </select>
+          </label>
+          <label
+            >Scenario
+            <select name="scenario">
+              <option value="baseline">Baseline</option>
+              <option value="resume">After background/resume</option>
+              <option value="memory-pressure">Memory pressure</option>
+              <option value="second-tab">Second active tab</option>
+            </select>
+          </label>
+          <label>Build/commit ID <input name="buildId" required /></label>
+          <label
+            >Safe Argon2 allocation cap (KiB)
+            <input
+              name="safeCapKiB"
+              type="number"
+              min="19456"
+              max="262144"
+              step="1"
+              required
+            />
+          </label>
+          <label
+            >Scenario and thermal notes
+            <textarea name="notes" rows="3"></textarea>
+          </label>
+        </fieldset>
+        <p>
+          The cap must come from device testing. The harness skips every memory
+          size above it. Start at the lowest matrix size and increase only after
+          observing reliable runs.
+        </p>
+        <button type="submit">Run viable matrix</button>
+        <button type="button" id="stop" disabled>Stop</button>
+        <button type="button" id="download">Download raw JSON</button>
+      </form>
+      <p id="status" role="status">Ready.</p>
+      <details id="raw-details">
+        <summary>Raw JSON (copy if the download is unavailable)</summary>
+        <textarea
+          id="raw-json"
+          aria-label="Raw benchmark JSON"
+          rows="12"
+          readonly
+        ></textarea>
+      </details>
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Memory KiB</th>
+            <th>Passes</th>
+            <th>Parallelism</th>
+            <th>Load ms</th>
+            <th>Cold ms</th>
+            <th>Warm p50 ms</th>
+            <th>Warm p95 ms</th>
+            <th>Errors</th>
+            <th>Peak process MiB</th>
+            <th>Observed failure / thermal notes</th>
+          </tr>
+        </thead>
+        <tbody id="results"></tbody>
+      </table>
+    </main>
+    <script type="module" src="/src/benchmark/main.ts"></script>
+    <style>
+      body {
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        color: #19222d;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        max-width: 1200px;
+      }
+      fieldset {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      input,
+      select,
+      textarea,
+      button {
+        font: inherit;
+        padding: 0.4rem;
+      }
+      button {
+        margin-right: 0.5rem;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.875rem;
+      }
+      #raw-json {
+        box-sizing: border-box;
+        width: 100%;
+        font-family: ui-monospace, monospace;
+      }
+      th,
+      td {
+        border: 1px solid #cad1d9;
+        padding: 0.4rem;
+        text-align: left;
+      }
+      th {
+        background: #e9edf2;
+      }
+      td input {
+        width: 6rem;
+      }
+      td textarea {
+        min-width: 12rem;
+      }
+    </style>
+  </body>
+</html>

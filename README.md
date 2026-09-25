@@ -56,6 +56,8 @@ npm test
 npm run build
 ```
 
+For device measurements, use the separate [Argon2id browser benchmark](docs/phase-0/argon2id-benchmark-harness.md).
+
 Database-backed integration tests use an isolated database whose name must end in
 `_test`:
 

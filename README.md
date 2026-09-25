@@ -14,6 +14,7 @@ Temporary demo choices are not an approval of the protocol for production use.
 - Argon2id key derivation with separated authentication and encryption branches
 - Random vault key wrapped with AES-256-GCM
 - Lock and unlock without storing the unwrapped key
+- Automatic locking after five minutes of inactivity
 - Create, read, update, and delete encrypted login entries
 - Encrypted folders with entry assignment and folder filtering
 - Favorites with quick toggling and a dedicated filtered view
@@ -81,6 +82,7 @@ folder data, and favorite state are contained only in client-encrypted ciphertex
 - [`docs/phase-0/README.md`](docs/phase-0/README.md)
 - [`docs/phase-0/decision-record.md`](docs/phase-0/decision-record.md)
 - [`docs/phase-0/argon2id-benchmark-plan.md`](docs/phase-0/argon2id-benchmark-plan.md)
+- [`docs/phase-0/auto-lock-demo.md`](docs/phase-0/auto-lock-demo.md)
 - [`docs/phase-0/threat-model.md`](docs/phase-0/threat-model.md)
 - [`docs/phase-0/cryptographic-protocol.md`](docs/phase-0/cryptographic-protocol.md)
 - [`docs/phase-0/authentication.md`](docs/phase-0/authentication.md)

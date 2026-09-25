@@ -1,6 +1,8 @@
 import {
+  useCallback,
   useEffect,
   useReducer,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -18,12 +20,18 @@ import {
   type EntryRecord,
   type FolderRecord,
 } from "./state/vault-state";
+import { createIdleLock } from "./state/idle-lock";
+
+type LockReason = "idle" | "page-leave" | null;
 
 export function App() {
   const [vaultState, dispatch] = useReducer(vaultReducer, initialVaultState);
   const [loading, setLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [lockReason, setLockReason] = useState<LockReason>(null);
+  const lifecycle = useRef(0);
 
   useEffect(() => {
     api
@@ -36,14 +44,18 @@ export function App() {
   async function unlock(masterPassword: string) {
     if (vaultState.status !== "locked") return;
     const { session } = vaultState;
+    const attempt = lifecycle.current;
     setBusy(true);
     setError("");
+    let keyEncryptionKey: Uint8Array<ArrayBuffer> | null = null;
     try {
       const keys = await deriveKeys(
         masterPassword,
         session.kdfSalt,
         session.kdfParams,
       );
+      keyEncryptionKey = keys.keyEncryptionKey;
+      if (lifecycle.current !== attempt) return;
       const key = await unwrapVaultKey(
         keys.keyEncryptionKey,
         session.userId,
@@ -51,18 +63,22 @@ export function App() {
         session.kdfParams,
         session.keyBundle,
       );
-      keys.keyEncryptionKey.fill(0);
+      if (lifecycle.current !== attempt) return;
       const { entries, folders } = await loadVault(key, session);
+      if (lifecycle.current !== attempt) return;
       dispatch({
         type: "UNLOCK_SUCCEEDED",
         vaultKey: key,
         entries,
         folders,
       });
+      setLockReason(null);
     } catch {
-      setError("Unable to unlock the vault. Check the master password.");
+      if (lifecycle.current === attempt)
+        setError("Unable to unlock the vault. Check the master password.");
     } finally {
-      setBusy(false);
+      keyEncryptionKey?.fill(0);
+      if (lifecycle.current === attempt) setBusy(false);
     }
   }
 
@@ -75,36 +91,96 @@ export function App() {
       entries,
       folders,
     });
+    setLockReason(null);
   }
 
-  function lock() {
+  const lock = useCallback((reason: LockReason) => {
+    lifecycle.current += 1;
     dispatch({ type: "LOCK" });
+    setLockReason(reason);
+    setBusy(false);
     setError("");
-  }
+  }, []);
+
+  useEffect(() => {
+    if (vaultState.status !== "unlocked") return;
+    const idle = createIdleLock(() => lock("idle"));
+    const activity = (event: Event) => {
+      if (!idle.activity()) return;
+      // Prevent the first late action from reaching the stale unlocked view.
+      if (event.cancelable) event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+    const resume = () => idle.check();
+    const visibility = () => {
+      if (document.visibilityState === "visible") resume();
+    };
+    const pageHide = () => lock("page-leave");
+
+    window.addEventListener("pointerdown", activity, true);
+    window.addEventListener("click", activity, true);
+    window.addEventListener("keydown", activity, true);
+    window.addEventListener("touchstart", activity, true);
+    window.addEventListener("focus", resume);
+    window.addEventListener("pageshow", resume);
+    window.addEventListener("pagehide", pageHide);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      idle.dispose();
+      window.removeEventListener("pointerdown", activity, true);
+      window.removeEventListener("click", activity, true);
+      window.removeEventListener("keydown", activity, true);
+      window.removeEventListener("touchstart", activity, true);
+      window.removeEventListener("focus", resume);
+      window.removeEventListener("pageshow", resume);
+      window.removeEventListener("pagehide", pageHide);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [vaultState.status, lock]);
 
   async function logout() {
-    setBusy(true);
+    lifecycle.current += 1;
+    dispatch({ type: "LOGOUT" });
+    setLockReason(null);
+    setBusy(false);
+    setError("");
+    setLoggingOut(true);
     try {
       await api.logout();
     } catch {
       /* Clear local state even if the session expired. */
+    } finally {
+      setLoggingOut(false);
     }
-    dispatch({ type: "LOGOUT" });
-    setBusy(false);
   }
 
+  const renderLifecycle = lifecycle.current;
   const setEntries: Dispatch<SetStateAction<EntryRecord[]>> = (update) => {
-    if (vaultState.status !== "unlocked") return;
+    if (
+      vaultState.status !== "unlocked" ||
+      lifecycle.current !== renderLifecycle
+    )
+      return;
     const entries =
       typeof update === "function" ? update(vaultState.entries) : update;
     dispatch({ type: "ENTRIES_UPDATED", entries });
   };
 
   const setFolders: Dispatch<SetStateAction<FolderRecord[]>> = (update) => {
-    if (vaultState.status !== "unlocked") return;
+    if (
+      vaultState.status !== "unlocked" ||
+      lifecycle.current !== renderLifecycle
+    )
+      return;
     const folders =
       typeof update === "function" ? update(vaultState.folders) : update;
     dispatch({ type: "FOLDERS_UPDATED", folders });
+  };
+  const setVaultBusy = (value: boolean) => {
+    if (lifecycle.current === renderLifecycle) setBusy(value);
+  };
+  const setVaultError = (value: string) => {
+    if (lifecycle.current === renderLifecycle) setError(value);
   };
 
   if (loading)
@@ -113,6 +189,16 @@ export function App() {
         <div className="center-card">
           <div className="spinner" />
           Loading Amethyst…
+        </div>
+      </Shell>
+    );
+
+  if (loggingOut)
+    return (
+      <Shell>
+        <div className="center-card">
+          <div className="spinner" />
+          Signing out…
         </div>
       </Shell>
     );
@@ -138,6 +224,7 @@ export function App() {
           email={vaultState.session.email}
           busy={busy}
           error={error}
+          lockReason={lockReason}
           onUnlock={unlock}
           onLogout={logout}
         />
@@ -155,10 +242,10 @@ export function App() {
         folders={vaultState.folders}
         setFolders={setFolders}
         busy={busy}
-        setBusy={setBusy}
+        setBusy={setVaultBusy}
         error={error}
-        setError={setError}
-        onLock={lock}
+        setError={setVaultError}
+        onLock={() => lock(null)}
         onLogout={logout}
       />
     </Shell>

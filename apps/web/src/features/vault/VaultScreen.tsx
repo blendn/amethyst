@@ -6,6 +6,7 @@ import {
   type VaultFolder,
 } from "../../crypto";
 import type { EntryRecord, FolderRecord } from "../../state/vault-state";
+import { IDLE_LOCK_MINUTES } from "../../state/idle-lock";
 import { EntryEditor, emptyEditor, type EditorState } from "./EntryEditor";
 import { EntryIcon } from "./EntryIcon";
 import { FolderEditor } from "./FolderEditor";
@@ -336,7 +337,8 @@ export function VaultScreen({
             <h1>{viewTitle}</h1>
             <p className="muted">
               {filtered.length} {filtered.length === 1 ? "entry" : "entries"} ·
-              decrypted locally
+              decrypted locally · locks after {IDLE_LOCK_MINUTES} minutes of
+              inactivity
             </p>
           </div>
           <div className="toolbar-actions">

@@ -11,6 +11,7 @@ Temporary demo choices are not an approval of the protocol for production use.
 ## Demo features
 
 - Register and sign in with a master password that remains in the browser
+- Check required browser cryptography and WebAssembly capabilities before account creation, sign-in, and unlock
 - Argon2id key derivation with separated authentication and encryption branches
 - Random vault key wrapped with AES-256-GCM
 - Lock and unlock without storing the unwrapped key

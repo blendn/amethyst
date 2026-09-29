@@ -281,6 +281,14 @@ main {
   text-align: center;
   padding: 35px;
 }
+.unsupported-browser ul {
+  display: inline-block;
+  margin: 16px auto;
+  text-align: left;
+}
+.unsupported-browser p {
+  line-height: 1.5;
+}
 .unlock-card .field {
   text-align: left;
 }

@@ -8,6 +8,7 @@ type AuthScreenProps = {
   error: string;
   setBusy: (value: boolean) => void;
   setError: (value: string) => void;
+  onCheckCompatibility: () => Promise<boolean>;
   onAuthenticated: (session: SessionData, key: CryptoKey) => Promise<void>;
 };
 
@@ -16,6 +17,7 @@ export function AuthScreen({
   error,
   setBusy,
   setError,
+  onCheckCompatibility,
   onAuthenticated,
 }: AuthScreenProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -38,6 +40,7 @@ export function AuthScreen({
     }
     setBusy(true);
     try {
+      if (!(await onCheckCompatibility())) return;
       const prelogin = await api.prelogin(email);
       if (mode === "register") {
         if (!prelogin.registration || !prelogin.registrationToken)

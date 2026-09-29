@@ -39,6 +39,13 @@ the byte encoding or interpretation of existing persisted demo records in place.
 Keep the educational-prototype warning visible until independent review. Approval
 of this decision record is not a security audit.
 
+The demo browser preflight checks the secure-context flag, working cryptographic
+randomness, AES-GCM and HKDF operations, and the WebAssembly compile, instantiate,
+and memory-growth APIs used by its Argon2id dependency. It blocks registration,
+sign-in, and unlock when a check fails. It does not establish that a device can
+reliably allocate the demo KDF memory or complete repeated derivations; the
+[benchmark plan](argon2id-benchmark-plan.md) remains open.
+
 ## Exit criteria
 
 Phase 0 is complete only when:

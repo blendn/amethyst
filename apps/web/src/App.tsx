@@ -8,9 +8,14 @@ import {
   type SetStateAction,
 } from "react";
 import { api, type SessionData } from "./api";
+import {
+  checkBrowserCapabilities,
+  type BrowserCompatibility,
+} from "./browser-capabilities";
 import { Shell } from "./components/Shell";
 import { deriveKeys, unwrapVaultKey } from "./crypto";
 import { AuthScreen } from "./features/auth/AuthScreen";
+import { UnsupportedBrowser } from "./features/auth/UnsupportedBrowser";
 import { UnlockScreen } from "./features/auth/UnlockScreen";
 import { loadVault } from "./features/vault/loadVault";
 import { VaultScreen } from "./features/vault/VaultScreen";
@@ -27,18 +32,36 @@ type LockReason = "idle" | "page-leave" | null;
 export function App() {
   const [vaultState, dispatch] = useReducer(vaultReducer, initialVaultState);
   const [loading, setLoading] = useState(true);
+  const [compatibility, setCompatibility] =
+    useState<BrowserCompatibility | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [lockReason, setLockReason] = useState<LockReason>(null);
   const lifecycle = useRef(0);
 
+  const checkCompatibility = useCallback(async () => {
+    const result = await checkBrowserCapabilities();
+    setCompatibility(result);
+    return result.supported;
+  }, []);
+
   useEffect(() => {
-    api
-      .session()
-      .then((session) => dispatch({ type: "SESSION_RESTORED", session }))
-      .catch(() => undefined)
-      .finally(() => setLoading(false));
+    let active = true;
+    void checkBrowserCapabilities()
+      .then(async (result) => {
+        if (!active) return;
+        setCompatibility(result);
+        if (!result.supported) return;
+        const session = await api.session().catch(() => null);
+        if (active && session) dispatch({ type: "SESSION_RESTORED", session });
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function unlock(masterPassword: string) {
@@ -49,6 +72,8 @@ export function App() {
     setError("");
     let keyEncryptionKey: Uint8Array<ArrayBuffer> | null = null;
     try {
+      if (!(await checkCompatibility()) || lifecycle.current !== attempt)
+        return;
       const keys = await deriveKeys(
         masterPassword,
         session.kdfSalt,
@@ -193,6 +218,13 @@ export function App() {
       </Shell>
     );
 
+  if (compatibility && !compatibility.supported)
+    return (
+      <Shell>
+        <UnsupportedBrowser missing={compatibility.missing} />
+      </Shell>
+    );
+
   if (loggingOut)
     return (
       <Shell>
@@ -211,6 +243,7 @@ export function App() {
           error={error}
           setBusy={setBusy}
           setError={setError}
+          onCheckCompatibility={checkCompatibility}
           onAuthenticated={completeAuthentication}
         />
       </Shell>
